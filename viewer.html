@@ -176,12 +176,64 @@
     color: rgba(255,255,255,0.75);
     line-height: 1.3;
   }
+  #toolbox {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(0,0,0,0.75);
+    padding: 10px;
+    border-radius: 12px;
+    z-index: 1000;
+    font-family: sans-serif;
+    width: 140px;
+  }
+  #toolbox h3 {
+    margin: 0 0 6px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  #toolbox button {
+    width: 100%;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 13px;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    cursor: pointer;
+  }
+  #toolbox button.active {
+    background: rgba(255,255,255,0.35);
+    border-color: #fff;
+  }
+  #toolbox .tool-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
 </style>
 </head>
 <body>
 <div id="loading">Yükleniyor: 0/64</div>
 <div id="hud">Zoom: 0.15x<br>Koordinat: 0, 0</div>
 <div id="tooltip"></div>
+<div id="toolbox">
+  <h3>Araçlar</h3>
+  <div class="tool-group">
+    <button id="toolPan" type="button" class="active">Gezin</button>
+    <button id="toolDraw" type="button">Boya</button>
+    <button id="toolMarker" type="button">Marker</button>
+  </div>
+  <div class="tool-group">
+    <button id="toolCenter" type="button">Haritayı Ortala</button>
+    <button id="toolReset" type="button">Görünümü Sıfırla</button>
+  </div>
+</div>
 <div id="controls">
   <button onclick="zoomIn()">+</button>
   <button onclick="zoomOut()">−</button>
@@ -223,6 +275,11 @@ const tooltip = document.getElementById('tooltip');
 const modePan = document.getElementById('modePan');
 const modeDraw = document.getElementById('modeDraw');
 const modeMarker = document.getElementById('modeMarker');
+const toolPan = document.getElementById('toolPan');
+const toolDraw = document.getElementById('toolDraw');
+const toolMarker = document.getElementById('toolMarker');
+const toolCenter = document.getElementById('toolCenter');
+const toolReset = document.getElementById('toolReset');
 const drawColorInput = document.getElementById('drawColor');
 const drawSizeInput = document.getElementById('drawSize');
 const clearDrawingsButton = document.getElementById('clearDrawings');
@@ -249,7 +306,8 @@ const mapHeight = tileH * 8;
 // Tile cache
 const tiles = {};
 let loadedCount = 0;
-let scale = 0.15;
+const defaultScale = 0.15;
+let scale = defaultScale;
 let offsetX = -2000;
 let offsetY = -2000;
 let markers = [];
@@ -329,6 +387,9 @@ function setMode(nextMode) {
   modePan.classList.toggle('active', mode === 'pan');
   modeDraw.classList.toggle('active', mode === 'draw');
   modeMarker.classList.toggle('active', mode === 'marker');
+  toolPan.classList.toggle('active', mode === 'pan');
+  toolDraw.classList.toggle('active', mode === 'draw');
+  toolMarker.classList.toggle('active', mode === 'marker');
   markerEditor.classList.toggle('active', mode === 'marker');
   activeStroke = null;
   activeMarker = null;
@@ -741,6 +802,12 @@ function centerMap() {
   draw();
 }
 
+function resetView() {
+  scale = defaultScale;
+  centerMap();
+  updateHud();
+}
+
 async function loadMarkers() {
   try {
     const usedStorage = loadMarkersFromStorage();
@@ -768,6 +835,11 @@ function loadDrawings() {
 modePan.addEventListener('click', () => setMode('pan'));
 modeDraw.addEventListener('click', () => setMode('draw'));
 modeMarker.addEventListener('click', () => setMode('marker'));
+toolPan.addEventListener('click', () => setMode('pan'));
+toolDraw.addEventListener('click', () => setMode('draw'));
+toolMarker.addEventListener('click', () => setMode('marker'));
+toolCenter.addEventListener('click', () => centerMap());
+toolReset.addEventListener('click', () => resetView());
 
 clearDrawingsButton.addEventListener('click', () => {
   if (confirm('Boyaları temizlemek istiyor musunuz?')) {
