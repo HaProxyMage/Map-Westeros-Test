@@ -195,7 +195,7 @@ function loadTile(row, col) {
   if (tiles[key]) return tiles[key];
   
   const img = new Image();
-  img.src = `tiles/${row}${col}.png`;
+  img.src = `Tiles/${row}${col}.png`;
   img.onload = () => {
     loadedCount++;
     loading.textContent = `Yüklendi: ${loadedCount}/64`;
