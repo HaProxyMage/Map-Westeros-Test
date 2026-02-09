@@ -90,6 +90,92 @@
     margin: 0 0 4px;
     font-size: 13px;
   }
+  #editorPanel {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    background: rgba(0,0,0,0.75);
+    color: #fff;
+    font-family: sans-serif;
+    padding: 12px;
+    border-radius: 10px;
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+  }
+  #editorPanel h3 {
+    font-size: 14px;
+    margin: 0;
+  }
+  #editorPanel .mode-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  #editorPanel .mode-buttons button {
+    width: 100%;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 13px;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.12);
+  }
+  #editorPanel .mode-buttons button.active {
+    background: rgba(255,255,255,0.35);
+    border-color: #fff;
+  }
+  #editorPanel label {
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  #editorPanel input[type="range"] {
+    width: 120px;
+  }
+  #editorPanel input[type="color"],
+  #editorPanel input[type="text"],
+  #editorPanel textarea {
+    width: 100%;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 6px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+  #editorPanel textarea {
+    min-height: 60px;
+    resize: vertical;
+  }
+  #editorPanel .row {
+    display: flex;
+    gap: 8px;
+  }
+  #editorPanel .row button {
+    flex: 1;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    cursor: pointer;
+  }
+  #markerEditor {
+    display: none;
+    gap: 6px;
+  }
+  #markerEditor.active {
+    display: flex;
+    flex-direction: column;
+  }
+  #panelHint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.3;
+  }
 </style>
 </head>
 <body>
@@ -100,6 +186,33 @@
   <button onclick="zoomIn()">+</button>
   <button onclick="zoomOut()">−</button>
 </div>
+<div id="editorPanel">
+  <h3>Düzenleme Modu</h3>
+  <div class="mode-buttons">
+    <button id="modePan" type="button" class="active">Gezin</button>
+    <button id="modeDraw" type="button">Boya</button>
+    <button id="modeMarker" type="button">Marker</button>
+  </div>
+  <label>Fırça Rengi <input id="drawColor" type="color" value="#ffcc00"></label>
+  <label>Fırça Boyutu <input id="drawSize" type="range" min="4" max="60" value="18"></label>
+  <div class="row">
+    <button id="clearDrawings" type="button">Boyaları Temizle</button>
+    <button id="exportDrawings" type="button">Boyaları İndir</button>
+  </div>
+  <div id="markerEditor">
+    <input id="markerTitle" type="text" placeholder="Marker başlığı">
+    <textarea id="markerDescription" placeholder="Açıklama"></textarea>
+    <div class="row">
+      <button id="saveMarker" type="button">Kaydet</button>
+      <button id="deleteMarker" type="button">Sil</button>
+    </div>
+  </div>
+  <div class="row">
+    <button id="exportMarkers" type="button">Markerları İndir</button>
+    <button id="resetMarkers" type="button">Markerları Sıfırla</button>
+  </div>
+  <div id="panelHint">Boya modunda çizim yapabilir, marker modunda ekleyip düzenleyebilirsiniz. Değişiklikler bu tarayıcıda saklanır.</div>
+</div>
 <canvas id="canvas"></canvas>
 <script>
 const canvas = document.getElementById('canvas');
@@ -107,6 +220,20 @@ const ctx = canvas.getContext('2d');
 const loading = document.getElementById('loading');
 const hud = document.getElementById('hud');
 const tooltip = document.getElementById('tooltip');
+const modePan = document.getElementById('modePan');
+const modeDraw = document.getElementById('modeDraw');
+const modeMarker = document.getElementById('modeMarker');
+const drawColorInput = document.getElementById('drawColor');
+const drawSizeInput = document.getElementById('drawSize');
+const clearDrawingsButton = document.getElementById('clearDrawings');
+const exportDrawingsButton = document.getElementById('exportDrawings');
+const exportMarkersButton = document.getElementById('exportMarkers');
+const resetMarkersButton = document.getElementById('resetMarkers');
+const markerEditor = document.getElementById('markerEditor');
+const markerTitle = document.getElementById('markerTitle');
+const markerDescription = document.getElementById('markerDescription');
+const saveMarkerButton = document.getElementById('saveMarker');
+const deleteMarkerButton = document.getElementById('deleteMarker');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -127,13 +254,21 @@ let offsetX = -2000;
 let offsetY = -2000;
 let markers = [];
 const markerRadius = 12;
+let mode = 'pan';
+let drawings = [];
+let activeStroke = null;
+let activeMarker = null;
+const storageKeys = {
+  markers: 'westerosMarkers',
+  drawings: 'westerosDrawings'
+};
 
 function updateHud(mouseX = null, mouseY = null) {
   if (mouseX !== null && mouseY !== null) {
     const mapPoint = screenToMap(mouseX, mouseY);
-    hud.innerHTML = `Zoom: ${scale.toFixed(2)}x<br>Koordinat: ${Math.round(mapPoint.x)}, ${Math.round(mapPoint.y)}`;
+    hud.innerHTML = `Zoom: ${scale.toFixed(2)}x<br>Koordinat: ${Math.round(mapPoint.x)}, ${Math.round(mapPoint.y)}<br>Mod: ${mode.toUpperCase()}`;
   } else {
-    hud.innerHTML = `Zoom: ${scale.toFixed(2)}x<br>Koordinat: -, -`;
+    hud.innerHTML = `Zoom: ${scale.toFixed(2)}x<br>Koordinat: -, -<br>Mod: ${mode.toUpperCase()}`;
   }
 }
 
@@ -187,6 +322,91 @@ function constrainView() {
   } else {
     offsetY = Math.max(minOffsetY, Math.min(maxOffsetY, offsetY));
   }
+}
+
+function setMode(nextMode) {
+  mode = nextMode;
+  modePan.classList.toggle('active', mode === 'pan');
+  modeDraw.classList.toggle('active', mode === 'draw');
+  modeMarker.classList.toggle('active', mode === 'marker');
+  markerEditor.classList.toggle('active', mode === 'marker');
+  activeStroke = null;
+  activeMarker = null;
+  markerTitle.value = '';
+  markerDescription.value = '';
+  hideTooltip();
+  updateHud();
+}
+
+function saveMarkersToStorage() {
+  localStorage.setItem(storageKeys.markers, JSON.stringify(markers));
+}
+
+function saveDrawingsToStorage() {
+  localStorage.setItem(storageKeys.drawings, JSON.stringify(drawings));
+}
+
+function loadMarkersFromStorage() {
+  try {
+    const raw = localStorage.getItem(storageKeys.markers);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        markers = data;
+        return true;
+      }
+    }
+  } catch (error) {
+    console.warn('Marker storage okunamadı.', error);
+  }
+  return false;
+}
+
+function loadDrawingsFromStorage() {
+  try {
+    const raw = localStorage.getItem(storageKeys.drawings);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        drawings = data;
+        return true;
+      }
+    }
+  } catch (error) {
+    console.warn('Drawing storage okunamadı.', error);
+  }
+  return false;
+}
+
+function hitTestMarker(mapPoint) {
+  let hitMarker = null;
+  markers.forEach((marker) => {
+    const dx = marker.x - mapPoint.x;
+    const dy = marker.y - mapPoint.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= 20) {
+      hitMarker = marker;
+    }
+  });
+  return hitMarker;
+}
+
+function openMarkerEditor(marker) {
+  activeMarker = marker;
+  markerTitle.value = marker?.name || '';
+  markerDescription.value = marker?.description || '';
+}
+
+function downloadJson(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 // Tile yükleme
@@ -253,6 +473,23 @@ function draw() {
     }
   }
 
+  drawings.forEach((stroke) => {
+    if (!stroke.points || stroke.points.length < 2) return;
+    ctx.beginPath();
+    ctx.strokeStyle = stroke.color;
+    ctx.lineWidth = stroke.size;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    stroke.points.forEach((point, index) => {
+      if (index === 0) {
+        ctx.moveTo(point.x, point.y);
+      } else {
+        ctx.lineTo(point.x, point.y);
+      }
+    });
+    ctx.stroke();
+  });
+
   markers.forEach((marker) => {
     const screenPos = mapToScreen(marker.x, marker.y);
     if (
@@ -280,9 +517,19 @@ let isDragging = false;
 let startX, startY;
 
 canvas.addEventListener('mousedown', (e) => {
-  isDragging = true;
-  startX = e.clientX - offsetX;
-  startY = e.clientY - offsetY;
+  if (mode === 'pan') {
+    isDragging = true;
+    startX = e.clientX - offsetX;
+    startY = e.clientY - offsetY;
+  } else if (mode === 'draw') {
+    const mapPoint = screenToMap(e.clientX, e.clientY);
+    activeStroke = {
+      color: drawColorInput.value,
+      size: Number(drawSizeInput.value),
+      points: [mapPoint]
+    };
+    drawings.push(activeStroke);
+  }
 });
 
 canvas.addEventListener('mousemove', (e) => {
@@ -290,27 +537,53 @@ canvas.addEventListener('mousemove', (e) => {
     offsetX = e.clientX - startX;
     offsetY = e.clientY - startY;
     draw();
+  } else if (mode === 'draw' && activeStroke) {
+    activeStroke.points.push(screenToMap(e.clientX, e.clientY));
+    draw();
   }
   updateHud(e.clientX, e.clientY);
 });
 
-canvas.addEventListener('mouseup', () => isDragging = false);
-canvas.addEventListener('mouseleave', () => isDragging = false);
+canvas.addEventListener('mouseup', () => {
+  isDragging = false;
+  if (activeStroke) {
+    saveDrawingsToStorage();
+    activeStroke = null;
+  }
+});
+canvas.addEventListener('mouseleave', () => {
+  isDragging = false;
+  if (activeStroke) {
+    saveDrawingsToStorage();
+    activeStroke = null;
+  }
+});
 canvas.addEventListener('mouseleave', () => {
   updateHud();
 });
 canvas.addEventListener('click', (e) => {
   const clickPoint = screenToMap(e.clientX, e.clientY);
-  let hitMarker = null;
+  const hitMarker = hitTestMarker(clickPoint);
 
-  markers.forEach((marker) => {
-    const dx = marker.x - clickPoint.x;
-    const dy = marker.y - clickPoint.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist <= 20) {
-      hitMarker = marker;
+  if (mode === 'marker') {
+    if (hitMarker) {
+      openMarkerEditor(hitMarker);
+    } else {
+      const newMarker = {
+        id: crypto.randomUUID(),
+        x: Math.round(clickPoint.x),
+        y: Math.round(clickPoint.y),
+        name: '',
+        description: ''
+      };
+      markers.push(newMarker);
+      openMarkerEditor(newMarker);
+      saveMarkersToStorage();
+      draw();
     }
-  });
+    hideTooltip();
+    return;
+  }
 
   if (hitMarker) {
     showTooltip(hitMarker, e.clientX, e.clientY);
@@ -327,8 +600,18 @@ canvas.addEventListener('touchstart', (e) => {
   touches = Array.from(e.touches);
   
   if (touches.length === 1) {
-    startX = touches[0].clientX - offsetX;
-    startY = touches[0].clientY - offsetY;
+    if (mode === 'pan') {
+      startX = touches[0].clientX - offsetX;
+      startY = touches[0].clientY - offsetY;
+    } else if (mode === 'draw') {
+      const mapPoint = screenToMap(touches[0].clientX, touches[0].clientY);
+      activeStroke = {
+        color: drawColorInput.value,
+        size: Number(drawSizeInput.value),
+        points: [mapPoint]
+      };
+      drawings.push(activeStroke);
+    }
   }
 }, { passive: false });
 
@@ -337,10 +620,15 @@ canvas.addEventListener('touchmove', (e) => {
   const newTouches = Array.from(e.touches);
   
   if (newTouches.length === 1 && touches.length === 1) {
-    // Tek parmak sürükleme
-    offsetX = newTouches[0].clientX - startX;
-    offsetY = newTouches[0].clientY - startY;
-    draw();
+    if (mode === 'pan') {
+      // Tek parmak sürükleme
+      offsetX = newTouches[0].clientX - startX;
+      offsetY = newTouches[0].clientY - startY;
+      draw();
+    } else if (mode === 'draw' && activeStroke) {
+      activeStroke.points.push(screenToMap(newTouches[0].clientX, newTouches[0].clientY));
+      draw();
+    }
   } else if (newTouches.length === 2 && touches.length === 2) {
     // İki parmak pinch zoom
     const oldDist = Math.hypot(
@@ -372,6 +660,10 @@ canvas.addEventListener('touchmove', (e) => {
 canvas.addEventListener('touchend', (e) => {
   e.preventDefault();
   touches = Array.from(e.touches);
+  if (activeStroke && touches.length === 0) {
+    saveDrawingsToStorage();
+    activeStroke = null;
+  }
 }, { passive: false });
 
 // Mouse wheel zoom
@@ -451,13 +743,16 @@ function centerMap() {
 
 async function loadMarkers() {
   try {
-    const response = await fetch('./markers.json');
-    if (!response.ok) {
-      throw new Error('Markers yüklenemedi.');
-    }
-    const data = await response.json();
-    if (Array.isArray(data)) {
-      markers = data;
+    const usedStorage = loadMarkersFromStorage();
+    if (!usedStorage) {
+      const response = await fetch('./markers.json');
+      if (!response.ok) {
+        throw new Error('Markers yüklenemedi.');
+      }
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        markers = data;
+      }
     }
   } catch (error) {
     console.warn('Marker verisi yok veya okunamadı.', error);
@@ -466,8 +761,60 @@ async function loadMarkers() {
   }
 }
 
+function loadDrawings() {
+  loadDrawingsFromStorage();
+}
+
+modePan.addEventListener('click', () => setMode('pan'));
+modeDraw.addEventListener('click', () => setMode('draw'));
+modeMarker.addEventListener('click', () => setMode('marker'));
+
+clearDrawingsButton.addEventListener('click', () => {
+  if (confirm('Boyaları temizlemek istiyor musunuz?')) {
+    drawings = [];
+    saveDrawingsToStorage();
+    draw();
+  }
+});
+
+exportDrawingsButton.addEventListener('click', () => {
+  downloadJson(drawings, 'westeros-drawings.json');
+});
+
+exportMarkersButton.addEventListener('click', () => {
+  downloadJson(markers, 'westeros-markers.json');
+});
+
+resetMarkersButton.addEventListener('click', () => {
+  if (confirm('Markerları sıfırlamak istiyor musunuz?')) {
+    markers = [];
+    saveMarkersToStorage();
+    draw();
+  }
+});
+
+saveMarkerButton.addEventListener('click', () => {
+  if (!activeMarker) return;
+  activeMarker.name = markerTitle.value.trim();
+  activeMarker.description = markerDescription.value.trim();
+  saveMarkersToStorage();
+  draw();
+});
+
+deleteMarkerButton.addEventListener('click', () => {
+  if (!activeMarker) return;
+  markers = markers.filter((marker) => marker !== activeMarker);
+  saveMarkersToStorage();
+  activeMarker = null;
+  markerTitle.value = '';
+  markerDescription.value = '';
+  draw();
+});
+
 centerMap();
 loadMarkers();
+loadDrawings();
+setMode('pan');
 updateHud();
 console.log("Canvas harita hazır! (Sınır kontrolü aktif)");
 </script>
