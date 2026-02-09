@@ -1,0 +1,73 @@
+name: Cancel GitHub Pages Deployments
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel-pages-deploys:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel in-progress/queued Pages runs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const workflows = await github.paginate(
+              github.rest.actions.listRepoWorkflows,
+              { owner, repo }
+            );
+
+            const pagesWorkflows = workflows.filter((workflow) => {
+              const nameMatch = workflow.name && /pages/i.test(workflow.name);
+              const pathMatch = workflow.path && /pages/i.test(workflow.path);
+              return nameMatch || pathMatch;
+            });
+
+            if (pagesWorkflows.length === 0) {
+              core.notice('No Pages-related workflows found to cancel.');
+              return;
+            }
+
+            for (const workflow of pagesWorkflows) {
+              const runs = await github.paginate(
+                github.rest.actions.listWorkflowRuns,
+                {
+                  owner,
+                  repo,
+                  workflow_id: workflow.id,
+                  status: 'in_progress'
+                }
+              );
+
+              const queuedRuns = await github.paginate(
+                github.rest.actions.listWorkflowRuns,
+                {
+                  owner,
+                  repo,
+                  workflow_id: workflow.id,
+                  status: 'queued'
+                }
+              );
+
+              const activeRuns = [...runs, ...queuedRuns];
+
+              if (activeRuns.length === 0) {
+                core.notice(`No active runs for workflow: ${workflow.name}`);
+                continue;
+              }
+
+              for (const run of activeRuns) {
+                core.notice(`Canceling run ${run.id} (${run.name}) for workflow ${workflow.name}`);
+                await github.rest.actions.cancelWorkflowRun({
+                  owner,
+                  repo,
+                  run_id: run.id
+                });
+              }
+            }

@@ -1,0 +1,18 @@
+# Westeros Map Viewer
+
+## GitHub Pages deployment
+
+1. **Settings → Pages**:
+   - **Source**: `Deploy from a branch`
+   - **Branch**: `main` (or your default branch), `/ (root)` folder
+2. Ensure `index.html` is at the repository root (already present).
+3. Keep the tiles directory name **case-sensitive**: the code loads tiles from `Tiles/`.
+4. If you change the tiles folder name, update `index.html` and `viewer.html` accordingly.
+
+## Local preview
+
+```bash
+python -m http.server 8000 --bind 0.0.0.0
+```
+
+Then open `http://127.0.0.1:8000/`.
