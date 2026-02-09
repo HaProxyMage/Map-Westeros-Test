@@ -11,7 +11,10 @@ This project is an interactive map of Westeros, designed to allow users to explo
 ## Installation
 1. Clone the repository: `git clone https://github.com/HaProxyMage/Map-Westeros-Test.git`
 2. Navigate to the project directory.
-3. Open `index.html` in your web browser.
+3. Open `index.html` in your web browser (redirects to `viewer.html`).
+
+## Deployment
+This project is configured for GitHub Pages deployment using the static workflow. The site is automatically deployed when changes are pushed to the `main` branch.
 
 ## Usage
 - Click on markers to learn more about each location.
