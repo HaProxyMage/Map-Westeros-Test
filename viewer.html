@@ -59,10 +59,43 @@
   button:active {
     background: rgba(255,255,255,0.4);
   }
+  #hud {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    color: #fff;
+    background: rgba(0,0,0,0.6);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    z-index: 1000;
+  }
+  #tooltip {
+    position: fixed;
+    color: #fff;
+    background: rgba(0,0,0,0.8);
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-family: sans-serif;
+    font-size: 12px;
+    max-width: 220px;
+    pointer-events: none;
+    transform: translate(-50%, -120%);
+    white-space: normal;
+    z-index: 1000;
+    display: none;
+  }
+  #tooltip h4 {
+    margin: 0 0 4px;
+    font-size: 13px;
+  }
 </style>
 </head>
 <body>
 <div id="loading">Yükleniyor: 0/64</div>
+<div id="hud">Zoom: 0.15x<br>Koordinat: 0, 0</div>
+<div id="tooltip"></div>
 <div id="controls">
   <button onclick="zoomIn()">+</button>
   <button onclick="zoomOut()">−</button>
@@ -72,6 +105,8 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const loading = document.getElementById('loading');
+const hud = document.getElementById('hud');
+const tooltip = document.getElementById('tooltip');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -90,6 +125,42 @@ let loadedCount = 0;
 let scale = 0.15;
 let offsetX = -2000;
 let offsetY = -2000;
+let markers = [];
+const markerRadius = 12;
+
+function updateHud(mouseX = null, mouseY = null) {
+  if (mouseX !== null && mouseY !== null) {
+    const mapPoint = screenToMap(mouseX, mouseY);
+    hud.innerHTML = `Zoom: ${scale.toFixed(2)}x<br>Koordinat: ${Math.round(mapPoint.x)}, ${Math.round(mapPoint.y)}`;
+  } else {
+    hud.innerHTML = `Zoom: ${scale.toFixed(2)}x<br>Koordinat: -, -`;
+  }
+}
+
+function mapToScreen(x, y) {
+  return {
+    x: x * scale + offsetX,
+    y: y * scale + offsetY
+  };
+}
+
+function screenToMap(x, y) {
+  return {
+    x: (x - offsetX) / scale,
+    y: (y - offsetY) / scale
+  };
+}
+
+function showTooltip(marker, screenX, screenY) {
+  tooltip.style.left = `${screenX}px`;
+  tooltip.style.top = `${screenY}px`;
+  tooltip.innerHTML = `<h4>${marker.name || 'Bölge'}</h4>${marker.description || ''}`;
+  tooltip.style.display = 'block';
+}
+
+function hideTooltip() {
+  tooltip.style.display = 'none';
+}
 
 // 🆕 SINIR KONTROLÜ FONKSİYONU
 function constrainView() {
@@ -124,7 +195,7 @@ function loadTile(row, col) {
   if (tiles[key]) return tiles[key];
   
   const img = new Image();
-  img.src = `/tiles/${row}${col}.png`;
+  img.src = `tiles/${row}${col}.png`;
   img.onload = () => {
     loadedCount++;
     loading.textContent = `Yüklendi: ${loadedCount}/64`;
@@ -181,6 +252,25 @@ function draw() {
       }
     }
   }
+
+  markers.forEach((marker) => {
+    const screenPos = mapToScreen(marker.x, marker.y);
+    if (
+      screenPos.x < -markerRadius ||
+      screenPos.x > canvas.width + markerRadius ||
+      screenPos.y < -markerRadius ||
+      screenPos.y > canvas.height + markerRadius
+    ) {
+      return;
+    }
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(255, 59, 48, 0.9)';
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2 / scale;
+    ctx.arc(marker.x, marker.y, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
   
   ctx.restore();
 }
@@ -201,10 +291,33 @@ canvas.addEventListener('mousemove', (e) => {
     offsetY = e.clientY - startY;
     draw();
   }
+  updateHud(e.clientX, e.clientY);
 });
 
 canvas.addEventListener('mouseup', () => isDragging = false);
 canvas.addEventListener('mouseleave', () => isDragging = false);
+canvas.addEventListener('mouseleave', () => {
+  updateHud();
+});
+canvas.addEventListener('click', (e) => {
+  const clickPoint = screenToMap(e.clientX, e.clientY);
+  let hitMarker = null;
+
+  markers.forEach((marker) => {
+    const dx = marker.x - clickPoint.x;
+    const dy = marker.y - clickPoint.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= 20) {
+      hitMarker = marker;
+    }
+  });
+
+  if (hitMarker) {
+    showTooltip(hitMarker, e.clientX, e.clientY);
+  } else {
+    hideTooltip();
+  }
+});
 
 // TOUCH EVENTS
 let touches = [];
@@ -336,7 +449,26 @@ function centerMap() {
   draw();
 }
 
+async function loadMarkers() {
+  try {
+    const response = await fetch('./markers.json');
+    if (!response.ok) {
+      throw new Error('Markers yüklenemedi.');
+    }
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      markers = data;
+    }
+  } catch (error) {
+    console.warn('Marker verisi yok veya okunamadı.', error);
+  } finally {
+    draw();
+  }
+}
+
 centerMap();
+loadMarkers();
+updateHud();
 console.log("Canvas harita hazır! (Sınır kontrolü aktif)");
 </script>
 </body>
