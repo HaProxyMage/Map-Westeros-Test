@@ -111,7 +111,7 @@
   }
   #editorPanel .mode-buttons {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 6px;
   }
   #editorPanel .mode-buttons button {
@@ -227,6 +227,7 @@
   <div class="tool-group">
     <button id="toolPan" type="button" class="active">Gezin</button>
     <button id="toolDraw" type="button">Boya</button>
+    <button id="toolErase" type="button">Silgi</button>
     <button id="toolMarker" type="button">Marker</button>
   </div>
   <div class="tool-group">
@@ -243,6 +244,7 @@
   <div class="mode-buttons">
     <button id="modePan" type="button" class="active">Gezin</button>
     <button id="modeDraw" type="button">Boya</button>
+    <button id="modeErase" type="button">Silgi</button>
     <button id="modeMarker" type="button">Marker</button>
   </div>
   <label>Fırça Rengi <input id="drawColor" type="color" value="#ffcc00"></label>
@@ -263,7 +265,7 @@
     <button id="exportMarkers" type="button">Markerları İndir</button>
     <button id="resetMarkers" type="button">Markerları Sıfırla</button>
   </div>
-  <div id="panelHint">Boya modunda çizim yapabilir, marker modunda ekleyip düzenleyebilirsiniz. Değişiklikler bu tarayıcıda saklanır.</div>
+  <div id="panelHint">Boya modunda çizim yapabilir, silgi ile boyaları temizleyebilir, marker modunda ekleyip düzenleyebilirsiniz. Değişiklikler bu tarayıcıda saklanır.</div>
 </div>
 <canvas id="canvas"></canvas>
 <script>
@@ -274,9 +276,11 @@ const hud = document.getElementById('hud');
 const tooltip = document.getElementById('tooltip');
 const modePan = document.getElementById('modePan');
 const modeDraw = document.getElementById('modeDraw');
+const modeErase = document.getElementById('modeErase');
 const modeMarker = document.getElementById('modeMarker');
 const toolPan = document.getElementById('toolPan');
 const toolDraw = document.getElementById('toolDraw');
+const toolErase = document.getElementById('toolErase');
 const toolMarker = document.getElementById('toolMarker');
 const toolCenter = document.getElementById('toolCenter');
 const toolReset = document.getElementById('toolReset');
@@ -316,6 +320,7 @@ let mode = 'pan';
 let drawings = [];
 let activeStroke = null;
 let activeMarker = null;
+let isErasing = false;
 const storageKeys = {
   markers: 'westerosMarkers',
   drawings: 'westerosDrawings'
@@ -386,13 +391,16 @@ function setMode(nextMode) {
   mode = nextMode;
   modePan.classList.toggle('active', mode === 'pan');
   modeDraw.classList.toggle('active', mode === 'draw');
+  modeErase.classList.toggle('active', mode === 'erase');
   modeMarker.classList.toggle('active', mode === 'marker');
   toolPan.classList.toggle('active', mode === 'pan');
   toolDraw.classList.toggle('active', mode === 'draw');
+  toolErase.classList.toggle('active', mode === 'erase');
   toolMarker.classList.toggle('active', mode === 'marker');
   markerEditor.classList.toggle('active', mode === 'marker');
   activeStroke = null;
   activeMarker = null;
+  isErasing = false;
   markerTitle.value = '';
   markerDescription.value = '';
   hideTooltip();
@@ -450,6 +458,28 @@ function hitTestMarker(mapPoint) {
     }
   });
   return hitMarker;
+}
+
+function eraseAt(mapPoint) {
+  const eraseRadius = Number(drawSizeInput.value) * 1.2;
+  let erased = false;
+  drawings = drawings.filter((stroke) => {
+    if (!stroke.points || stroke.points.length === 0) return false;
+    const hit = stroke.points.some((point) => {
+      const dx = point.x - mapPoint.x;
+      const dy = point.y - mapPoint.y;
+      return Math.hypot(dx, dy) <= eraseRadius;
+    });
+    if (hit) {
+      erased = true;
+      return false;
+    }
+    return true;
+  });
+  if (erased) {
+    saveDrawingsToStorage();
+    draw();
+  }
 }
 
 function openMarkerEditor(marker) {
@@ -590,6 +620,9 @@ canvas.addEventListener('mousedown', (e) => {
       points: [mapPoint]
     };
     drawings.push(activeStroke);
+  } else if (mode === 'erase') {
+    isErasing = true;
+    eraseAt(screenToMap(e.clientX, e.clientY));
   }
 });
 
@@ -601,12 +634,15 @@ canvas.addEventListener('mousemove', (e) => {
   } else if (mode === 'draw' && activeStroke) {
     activeStroke.points.push(screenToMap(e.clientX, e.clientY));
     draw();
+  } else if (mode === 'erase' && isErasing) {
+    eraseAt(screenToMap(e.clientX, e.clientY));
   }
   updateHud(e.clientX, e.clientY);
 });
 
 canvas.addEventListener('mouseup', () => {
   isDragging = false;
+  isErasing = false;
   if (activeStroke) {
     saveDrawingsToStorage();
     activeStroke = null;
@@ -614,6 +650,7 @@ canvas.addEventListener('mouseup', () => {
 });
 canvas.addEventListener('mouseleave', () => {
   isDragging = false;
+  isErasing = false;
   if (activeStroke) {
     saveDrawingsToStorage();
     activeStroke = null;
@@ -672,6 +709,9 @@ canvas.addEventListener('touchstart', (e) => {
         points: [mapPoint]
       };
       drawings.push(activeStroke);
+    } else if (mode === 'erase') {
+      isErasing = true;
+      eraseAt(screenToMap(touches[0].clientX, touches[0].clientY));
     }
   }
 }, { passive: false });
@@ -689,6 +729,8 @@ canvas.addEventListener('touchmove', (e) => {
     } else if (mode === 'draw' && activeStroke) {
       activeStroke.points.push(screenToMap(newTouches[0].clientX, newTouches[0].clientY));
       draw();
+    } else if (mode === 'erase' && isErasing) {
+      eraseAt(screenToMap(newTouches[0].clientX, newTouches[0].clientY));
     }
   } else if (newTouches.length === 2 && touches.length === 2) {
     // İki parmak pinch zoom
@@ -724,6 +766,9 @@ canvas.addEventListener('touchend', (e) => {
   if (activeStroke && touches.length === 0) {
     saveDrawingsToStorage();
     activeStroke = null;
+  }
+  if (touches.length === 0) {
+    isErasing = false;
   }
 }, { passive: false });
 
@@ -834,9 +879,11 @@ function loadDrawings() {
 
 modePan.addEventListener('click', () => setMode('pan'));
 modeDraw.addEventListener('click', () => setMode('draw'));
+modeErase.addEventListener('click', () => setMode('erase'));
 modeMarker.addEventListener('click', () => setMode('marker'));
 toolPan.addEventListener('click', () => setMode('pan'));
 toolDraw.addEventListener('click', () => setMode('draw'));
+toolErase.addEventListener('click', () => setMode('erase'));
 toolMarker.addEventListener('click', () => setMode('marker'));
 toolCenter.addEventListener('click', () => centerMap());
 toolReset.addEventListener('click', () => resetView());
