@@ -71,6 +71,38 @@
     font-size: 12px;
     z-index: 1000;
   }
+  #topBar {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.72);
+    padding: 8px;
+    border-radius: 10px;
+    z-index: 1100;
+    font-family: sans-serif;
+  }
+  #topBar input,
+  #topBar select,
+  #topBar button {
+    height: 34px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    font-size: 13px;
+    padding: 0 10px;
+  }
+  #topBar input {
+    width: 200px;
+  }
+  #topBar button {
+    cursor: pointer;
+    min-width: 86px;
+  }
   #tooltip {
     position: fixed;
     color: #fff;
@@ -99,11 +131,37 @@
     font-family: sans-serif;
     padding: 12px;
     border-radius: 10px;
-    width: 260px;
+    width: 270px;
     display: flex;
     flex-direction: column;
     gap: 10px;
     z-index: 1000;
+  }
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-header button {
+    width: auto;
+    height: 28px;
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 0 10px;
+    border: 1px solid rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+  }
+  #editorPanelBody,
+  #toolboxBody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #editorPanel.collapsed #editorPanelBody,
+  #toolbox.collapsed #toolboxBody {
+    display: none;
   }
   #editorPanel h3 {
     font-size: 14px;
@@ -188,7 +246,7 @@
     border-radius: 12px;
     z-index: 1000;
     font-family: sans-serif;
-    width: 140px;
+    width: 160px;
   }
   #toolbox h3 {
     margin: 0 0 6px;
@@ -216,23 +274,110 @@
     flex-direction: column;
     gap: 6px;
   }
+  @media (max-width: 900px) {
+    #topBar {
+      top: 12px;
+      width: calc(100% - 24px);
+      left: 12px;
+      transform: none;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #topBar input {
+      width: 160px;
+      font-size: 12px;
+    }
+    #topBar input,
+    #topBar select,
+    #topBar button {
+      height: 30px;
+      font-size: 11px;
+    }
+    #loading,
+    #hud,
+    #toolbox,
+    #editorPanel {
+      font-size: 11px;
+    }
+    #toolbox {
+      top: auto;
+      bottom: 84px;
+      left: 12px;
+      width: 130px;
+      padding: 8px;
+      gap: 6px;
+    }
+    #toolbox button {
+      height: 30px;
+      font-size: 11px;
+    }
+    #editorPanel {
+      left: 12px;
+      bottom: 12px;
+      width: 220px;
+      gap: 8px;
+      padding: 8px;
+    }
+    #editorPanel .mode-buttons button,
+    #editorPanel .row button {
+      height: 28px;
+      font-size: 11px;
+    }
+    #editorPanel input[type="range"] {
+      width: 90px;
+    }
+    #controls {
+      right: 12px;
+      bottom: 12px;
+      gap: 8px;
+    }
+    #controls button {
+      width: 42px;
+      height: 42px;
+      font-size: 18px;
+    }
+    #hud {
+      right: 12px;
+      top: auto;
+      bottom: 120px;
+      padding: 6px 8px;
+      font-size: 10px;
+    }
+    #loading {
+      left: 12px;
+      top: 54px;
+      padding: 6px 8px;
+      font-size: 10px;
+    }
+  }
 </style>
 </head>
 <body>
 <div id="loading">Yükleniyor: 0/64</div>
 <div id="hud">Zoom: 0.15x<br>Koordinat: 0, 0</div>
 <div id="tooltip"></div>
+<div id="topBar">
+  <select id="mapSelect" aria-label="Harita seçimi"></select>
+  <select id="regionSelect" aria-label="Bölge seçimi"></select>
+  <input id="searchInput" type="text" placeholder="Bölge veya marker ara...">
+  <button id="searchButton" type="button">Git</button>
+</div>
 <div id="toolbox">
-  <h3>Araçlar</h3>
-  <div class="tool-group">
-    <button id="toolPan" type="button" class="active">Gezin</button>
-    <button id="toolDraw" type="button">Boya</button>
-    <button id="toolErase" type="button">Silgi</button>
-    <button id="toolMarker" type="button">Marker</button>
+  <div class="panel-header">
+    <h3>Araçlar</h3>
+    <button id="toggleToolbox" type="button">Gizle</button>
   </div>
-  <div class="tool-group">
-    <button id="toolCenter" type="button">Haritayı Ortala</button>
-    <button id="toolReset" type="button">Görünümü Sıfırla</button>
+  <div id="toolboxBody">
+    <div class="tool-group">
+      <button id="toolPan" type="button" class="active">Gezin</button>
+      <button id="toolDraw" type="button">Boya</button>
+      <button id="toolErase" type="button">Silgi</button>
+      <button id="toolMarker" type="button">Marker</button>
+    </div>
+    <div class="tool-group">
+      <button id="toolCenter" type="button">Haritayı Ortala</button>
+      <button id="toolReset" type="button">Görünümü Sıfırla</button>
+    </div>
   </div>
 </div>
 <div id="controls">
@@ -240,32 +385,47 @@
   <button onclick="zoomOut()">−</button>
 </div>
 <div id="editorPanel">
-  <h3>Düzenleme Modu</h3>
-  <div class="mode-buttons">
-    <button id="modePan" type="button" class="active">Gezin</button>
-    <button id="modeDraw" type="button">Boya</button>
-    <button id="modeErase" type="button">Silgi</button>
-    <button id="modeMarker" type="button">Marker</button>
+  <div class="panel-header">
+    <h3>Düzenleme Modu</h3>
+    <button id="toggleEditorPanel" type="button">Gizle</button>
   </div>
-  <label>Fırça Rengi <input id="drawColor" type="color" value="#ffcc00"></label>
-  <label>Fırça Boyutu <input id="drawSize" type="range" min="4" max="60" value="18"></label>
-  <div class="row">
-    <button id="clearDrawings" type="button">Boyaları Temizle</button>
-    <button id="exportDrawings" type="button">Boyaları İndir</button>
-  </div>
-  <div id="markerEditor">
-    <input id="markerTitle" type="text" placeholder="Marker başlığı">
-    <textarea id="markerDescription" placeholder="Açıklama"></textarea>
-    <div class="row">
-      <button id="saveMarker" type="button">Kaydet</button>
-      <button id="deleteMarker" type="button">Sil</button>
+  <div id="editorPanelBody">
+    <div class="mode-buttons">
+      <button id="modePan" type="button" class="active">Gezin</button>
+      <button id="modeDraw" type="button">Boya</button>
+      <button id="modeErase" type="button">Silgi</button>
+      <button id="modeMarker" type="button">Marker</button>
     </div>
+    <label>Fırça Rengi <input id="drawColor" type="color" value="#ffcc00"></label>
+    <label>Fırça Boyutu <input id="drawSize" type="range" min="4" max="60" value="18"></label>
+    <div class="row">
+      <button id="clearDrawings" type="button">Boyaları Temizle</button>
+      <button id="exportDrawings" type="button">Boyaları İndir</button>
+    </div>
+    <div id="markerEditor">
+      <input id="markerTitle" type="text" placeholder="Marker başlığı">
+      <textarea id="markerDescription" placeholder="Açıklama"></textarea>
+      <label>Marker Türü
+        <select id="markerType">
+          <option value="city">Şehir</option>
+          <option value="castle">Kale</option>
+          <option value="battle">Savaş</option>
+          <option value="port">Liman</option>
+          <option value="religion">İnanç</option>
+          <option value="quest">Görev</option>
+        </select>
+      </label>
+      <div class="row">
+        <button id="saveMarker" type="button">Kaydet</button>
+        <button id="deleteMarker" type="button">Sil</button>
+      </div>
+    </div>
+    <div class="row">
+      <button id="exportMarkers" type="button">Markerları İndir</button>
+      <button id="resetMarkers" type="button">Markerları Sıfırla</button>
+    </div>
+    <div id="panelHint">Boya modunda çizim yapabilir, silgi ile boyaları temizleyebilir, marker modunda ekleyip düzenleyebilirsiniz. Değişiklikler bu tarayıcıda saklanır.</div>
   </div>
-  <div class="row">
-    <button id="exportMarkers" type="button">Markerları İndir</button>
-    <button id="resetMarkers" type="button">Markerları Sıfırla</button>
-  </div>
-  <div id="panelHint">Boya modunda çizim yapabilir, silgi ile boyaları temizleyebilir, marker modunda ekleyip düzenleyebilirsiniz. Değişiklikler bu tarayıcıda saklanır.</div>
 </div>
 <canvas id="canvas"></canvas>
 <script>
@@ -295,20 +455,69 @@ const markerTitle = document.getElementById('markerTitle');
 const markerDescription = document.getElementById('markerDescription');
 const saveMarkerButton = document.getElementById('saveMarker');
 const deleteMarkerButton = document.getElementById('deleteMarker');
+const markerTypeInput = document.getElementById('markerType');
+const mapSelect = document.getElementById('mapSelect');
+const regionSelect = document.getElementById('regionSelect');
+const searchInput = document.getElementById('searchInput');
+const searchButton = document.getElementById('searchButton');
+const toolbox = document.getElementById('toolbox');
+const editorPanel = document.getElementById('editorPanel');
+const toggleToolboxButton = document.getElementById('toggleToolbox');
+const toggleEditorPanelButton = document.getElementById('toggleEditorPanel');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const tileW = 2348;
-const tileH = 3554;
-const letters = ["A","B","C","D","E","F","G","H"];
+const mapConfigs = [
+  {
+    id: 'westeros',
+    label: 'Westeros Ana Harita',
+    tilePath: 'Tiles',
+    letters: ["A","B","C","D","E","F","G","H"],
+    columns: 8,
+    tileW: 2348,
+    tileH: 3554
+  },
+  {
+    id: 'westeros-copy',
+    label: 'Westeros Alternatif',
+    tilePath: 'Tiles',
+    letters: ["A","B","C","D","E","F","G","H"],
+    columns: 8,
+    tileW: 2348,
+    tileH: 3554
+  }
+];
 
-// Harita toplam boyutu
-const mapWidth = tileW * 8;
-const mapHeight = tileH * 8;
+const regions = [
+  { id: 'north', label: 'North', x: 7700, y: 4200, zoom: 0.28 },
+  { id: 'riverlands', label: 'Riverlands', x: 8600, y: 9300, zoom: 0.32 },
+  { id: 'vale', label: 'Vale', x: 11900, y: 8400, zoom: 0.36 },
+  { id: 'westerlands', label: 'Westerlands', x: 6400, y: 10800, zoom: 0.34 },
+  { id: 'reach', label: 'Reach', x: 8300, y: 14700, zoom: 0.3 },
+  { id: 'dorne', label: 'Dorne', x: 11000, y: 21400, zoom: 0.26 },
+  { id: 'kings-landing', label: 'King's Landing', x: 10300, y: 12250, zoom: 0.45 },
+  { id: 'wall', label: 'The Wall', x: 8100, y: 1650, zoom: 0.42 }
+];
+
+const markerTypeStyles = {
+  city: { label: 'Şehir', color: 'rgba(255, 195, 0, 0.95)', symbol: '●' },
+  castle: { label: 'Kale', color: 'rgba(132, 94, 194, 0.95)', symbol: '■' },
+  battle: { label: 'Savaş', color: 'rgba(239, 71, 111, 0.95)', symbol: '✦' },
+  port: { label: 'Liman', color: 'rgba(17, 138, 178, 0.95)', symbol: '◆' },
+  religion: { label: 'İnanç', color: 'rgba(6, 214, 160, 0.95)', symbol: '✚' },
+  quest: { label: 'Görev', color: 'rgba(255, 255, 255, 0.95)', symbol: '★' }
+};
+
+let currentMap = mapConfigs[0];
+let tileW = currentMap.tileW;
+let tileH = currentMap.tileH;
+let letters = currentMap.letters;
+let mapWidth = tileW * currentMap.columns;
+let mapHeight = tileH * letters.length;
 
 // Tile cache
-const tiles = {};
+let tiles = {};
 let loadedCount = 0;
 const defaultScale = 0.15;
 let scale = defaultScale;
@@ -323,7 +532,8 @@ let activeMarker = null;
 let isErasing = false;
 const storageKeys = {
   markers: 'westerosMarkers',
-  drawings: 'westerosDrawings'
+  drawings: 'westerosDrawings',
+  uiState: 'westerosUiState'
 };
 
 function updateHud(mouseX = null, mouseY = null) {
@@ -350,9 +560,10 @@ function screenToMap(x, y) {
 }
 
 function showTooltip(marker, screenX, screenY) {
+  const markerStyle = markerTypeStyles[marker.type] || markerTypeStyles.city;
   tooltip.style.left = `${screenX}px`;
   tooltip.style.top = `${screenY}px`;
-  tooltip.innerHTML = `<h4>${marker.name || 'Bölge'}</h4>${marker.description || ''}`;
+  tooltip.innerHTML = `<h4>${markerStyle.symbol} ${marker.name || 'Bölge'}</h4><small>${markerStyle.label}</small><br>${marker.description || ''}`;
   tooltip.style.display = 'block';
 }
 
@@ -387,6 +598,121 @@ function constrainView() {
   }
 }
 
+
+function animateTo(mapX, mapY, targetZoom = null) {
+  if (targetZoom !== null) {
+    scale = Math.max(0.05, Math.min(targetZoom, 1.5));
+  }
+  offsetX = canvas.width / 2 - mapX * scale;
+  offsetY = canvas.height / 2 - mapY * scale;
+  draw();
+  updateHud();
+}
+
+function togglePanel(panelEl, toggleButton) {
+  const collapsed = panelEl.classList.toggle('collapsed');
+  toggleButton.textContent = collapsed ? 'Aç' : 'Gizle';
+  saveUiState();
+}
+
+function saveUiState() {
+  const uiState = {
+    toolboxCollapsed: toolbox.classList.contains('collapsed'),
+    editorCollapsed: editorPanel.classList.contains('collapsed'),
+    selectedMapId: currentMap.id
+  };
+  localStorage.setItem(storageKeys.uiState, JSON.stringify(uiState));
+}
+
+function loadUiState() {
+  try {
+    const raw = localStorage.getItem(storageKeys.uiState);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (data.toolboxCollapsed) {
+      toolbox.classList.add('collapsed');
+      toggleToolboxButton.textContent = 'Aç';
+    }
+    if (data.editorCollapsed) {
+      editorPanel.classList.add('collapsed');
+      toggleEditorPanelButton.textContent = 'Aç';
+    }
+    if (data.selectedMapId) {
+      const foundMap = mapConfigs.find((mapConfig) => mapConfig.id === data.selectedMapId);
+      if (foundMap) {
+        currentMap = foundMap;
+      }
+    }
+  } catch (error) {
+    console.warn('UI state okunamadı.', error);
+  }
+}
+
+function setupSelectors() {
+  mapSelect.innerHTML = mapConfigs
+    .map((mapConfig) => `<option value="${mapConfig.id}">${mapConfig.label}</option>`)
+    .join('');
+  mapSelect.value = currentMap.id;
+
+  regionSelect.innerHTML = ['<option value="">Bölgeye git...</option>']
+    .concat(regions.map((region) => `<option value="${region.id}">${region.label}</option>`))
+    .join('');
+}
+
+function applyMapConfig(mapConfig, shouldCenter = true) {
+  currentMap = mapConfig;
+  tileW = currentMap.tileW;
+  tileH = currentMap.tileH;
+  letters = currentMap.letters;
+  mapWidth = tileW * currentMap.columns;
+  mapHeight = tileH * letters.length;
+  tiles = {};
+  loadedCount = 0;
+  loading.style.display = 'block';
+  loading.textContent = `Yükleniyor: 0/${letters.length * currentMap.columns}`;
+  loadAllTiles();
+  if (shouldCenter) {
+    centerMap();
+  } else {
+    draw();
+  }
+  saveUiState();
+}
+
+function searchAndNavigate() {
+  const query = searchInput.value.trim().toLowerCase();
+  if (!query) return;
+
+  const markerHit = markers.find((marker) =>
+    marker.name?.toLowerCase().includes(query) ||
+    marker.description?.toLowerCase().includes(query)
+  );
+
+  if (markerHit) {
+    animateTo(markerHit.x, markerHit.y, Math.max(scale, 0.42));
+    openMarkerEditor(markerHit);
+    setMode('marker');
+    return;
+  }
+
+  const regionHit = regions.find((region) => region.label.toLowerCase().includes(query));
+  if (regionHit) {
+    animateTo(regionHit.x, regionHit.y, regionHit.zoom);
+    regionSelect.value = regionHit.id;
+    return;
+  }
+
+  alert('Arama sonucu bulunamadı.');
+}
+
+function loadAllTiles() {
+  for (let r = 0; r < letters.length; r++) {
+    for (let c = 1; c <= currentMap.columns; c++) {
+      loadTile(letters[r], c);
+    }
+  }
+}
+
 function setMode(nextMode) {
   mode = nextMode;
   modePan.classList.toggle('active', mode === 'pan');
@@ -403,6 +729,7 @@ function setMode(nextMode) {
   isErasing = false;
   markerTitle.value = '';
   markerDescription.value = '';
+  markerTypeInput.value = 'city';
   hideTooltip();
   updateHud();
 }
@@ -421,7 +748,7 @@ function loadMarkersFromStorage() {
     if (raw) {
       const data = JSON.parse(raw);
       if (Array.isArray(data)) {
-        markers = data;
+        markers = data.map((marker) => ({ ...marker, type: marker.type || 'city' }));
         return true;
       }
     }
@@ -486,6 +813,7 @@ function openMarkerEditor(marker) {
   activeMarker = marker;
   markerTitle.value = marker?.name || '';
   markerDescription.value = marker?.description || '';
+  markerTypeInput.value = marker?.type || 'city';
 }
 
 function downloadJson(data, filename) {
@@ -506,11 +834,11 @@ function loadTile(row, col) {
   if (tiles[key]) return tiles[key];
   
   const img = new Image();
-  img.src = `Tiles/${row}${col}.png`;
+  img.src = `${currentMap.tilePath}/${row}${col}.png`;
   img.onload = () => {
     loadedCount++;
-    loading.textContent = `Yüklendi: ${loadedCount}/64`;
-    if (loadedCount === 64) {
+    loading.textContent = `Yüklendi: ${loadedCount}/${letters.length * currentMap.columns}`;
+    if (loadedCount === letters.length * currentMap.columns) {
       setTimeout(() => loading.style.display = 'none', 1000);
     }
     draw();
@@ -521,13 +849,6 @@ function loadTile(row, col) {
   
   tiles[key] = img;
   return img;
-}
-
-// Tüm tile'ları yükle
-for (let r = 0; r < 8; r++) {
-  for (let c = 1; c <= 8; c++) {
-    loadTile(letters[r], c);
-  }
 }
 
 // Çizim
@@ -542,8 +863,8 @@ function draw() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
   
-  for (let r = 0; r < 8; r++) {
-    for (let c = 1; c <= 8; c++) {
+  for (let r = 0; r < letters.length; r++) {
+    for (let c = 1; c <= currentMap.columns; c++) {
       const x = (c - 1) * tileW;
       const y = r * tileH;
       
@@ -591,13 +912,19 @@ function draw() {
     ) {
       return;
     }
+    const markerStyle = markerTypeStyles[marker.type] || markerTypeStyles.city;
     ctx.beginPath();
-    ctx.fillStyle = 'rgba(255, 59, 48, 0.9)';
+    ctx.fillStyle = markerStyle.color;
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2 / scale;
     ctx.arc(marker.x, marker.y, 16, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+    ctx.fillStyle = '#111';
+    ctx.font = `${24 / scale}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(markerStyle.symbol, marker.x, marker.y + 1);
   });
   
   ctx.restore();
@@ -672,7 +999,8 @@ canvas.addEventListener('click', (e) => {
         x: Math.round(clickPoint.x),
         y: Math.round(clickPoint.y),
         name: '',
-        description: ''
+        description: '',
+        type: 'city'
       };
       markers.push(newMarker);
       openMarkerEditor(newMarker);
@@ -863,7 +1191,7 @@ async function loadMarkers() {
       }
       const data = await response.json();
       if (Array.isArray(data)) {
-        markers = data;
+        markers = data.map((marker) => ({ ...marker, type: marker.type || 'city' }));
       }
     }
   } catch (error) {
@@ -888,6 +1216,29 @@ toolMarker.addEventListener('click', () => setMode('marker'));
 toolCenter.addEventListener('click', () => centerMap());
 toolReset.addEventListener('click', () => resetView());
 
+toggleToolboxButton.addEventListener('click', () => togglePanel(toolbox, toggleToolboxButton));
+toggleEditorPanelButton.addEventListener('click', () => togglePanel(editorPanel, toggleEditorPanelButton));
+
+mapSelect.addEventListener('change', (event) => {
+  const nextMap = mapConfigs.find((mapConfig) => mapConfig.id === event.target.value);
+  if (nextMap) {
+    applyMapConfig(nextMap, true);
+  }
+});
+
+regionSelect.addEventListener('change', (event) => {
+  const selectedRegion = regions.find((region) => region.id === event.target.value);
+  if (!selectedRegion) return;
+  animateTo(selectedRegion.x, selectedRegion.y, selectedRegion.zoom);
+});
+
+searchButton.addEventListener('click', () => searchAndNavigate());
+searchInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    searchAndNavigate();
+  }
+});
+
 clearDrawingsButton.addEventListener('click', () => {
   if (confirm('Boyaları temizlemek istiyor musunuz?')) {
     drawings = [];
@@ -907,6 +1258,10 @@ exportMarkersButton.addEventListener('click', () => {
 resetMarkersButton.addEventListener('click', () => {
   if (confirm('Markerları sıfırlamak istiyor musunuz?')) {
     markers = [];
+    activeMarker = null;
+    markerTitle.value = '';
+    markerDescription.value = '';
+    markerTypeInput.value = 'city';
     saveMarkersToStorage();
     draw();
   }
@@ -916,6 +1271,7 @@ saveMarkerButton.addEventListener('click', () => {
   if (!activeMarker) return;
   activeMarker.name = markerTitle.value.trim();
   activeMarker.description = markerDescription.value.trim();
+  activeMarker.type = markerTypeInput.value;
   saveMarkersToStorage();
   draw();
 });
@@ -930,7 +1286,9 @@ deleteMarkerButton.addEventListener('click', () => {
   draw();
 });
 
-centerMap();
+loadUiState();
+setupSelectors();
+applyMapConfig(currentMap, true);
 loadMarkers();
 loadDrawings();
 setMode('pan');
