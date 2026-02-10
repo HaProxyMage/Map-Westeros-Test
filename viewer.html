@@ -20,9 +20,12 @@
     height: 100%;
   }
   canvas { 
+    position: fixed;
+    inset: 0;
     display: block; 
     cursor: grab;
     touch-action: none;
+    z-index: 1;
   }
   canvas:active { cursor: grabbing; }
   #loading { 
@@ -621,8 +624,7 @@ function togglePanel(panelEl, toggleButton) {
 function saveUiState() {
   const uiState = {
     toolboxCollapsed: toolbox.classList.contains('collapsed'),
-    editorCollapsed: editorPanel.classList.contains('collapsed'),
-    selectedMapId: currentMap.id
+    editorCollapsed: editorPanel.classList.contains('collapsed')
   };
   localStorage.setItem(storageKeys.uiState, JSON.stringify(uiState));
 }
@@ -639,12 +641,6 @@ function loadUiState() {
     if (data.editorCollapsed) {
       editorPanel.classList.add('collapsed');
       toggleEditorPanelButton.textContent = 'Aç';
-    }
-    if (data.selectedMapId) {
-      const foundMap = mapConfigs.find((mapConfig) => mapConfig.id === data.selectedMapId);
-      if (foundMap) {
-        currentMap = foundMap;
-      }
     }
   } catch (error) {
     console.warn('UI state okunamadı.', error);
