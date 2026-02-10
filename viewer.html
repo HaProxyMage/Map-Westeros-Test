@@ -376,6 +376,7 @@
     </div>
     <div class="tool-group">
       <button id="toolCenter" type="button">Haritayı Ortala</button>
+      <button id="toolFit" type="button">Ekrana Sığdır</button>
       <button id="toolReset" type="button">Görünümü Sıfırla</button>
     </div>
   </div>
@@ -443,6 +444,7 @@ const toolDraw = document.getElementById('toolDraw');
 const toolErase = document.getElementById('toolErase');
 const toolMarker = document.getElementById('toolMarker');
 const toolCenter = document.getElementById('toolCenter');
+const toolFit = document.getElementById('toolFit');
 const toolReset = document.getElementById('toolReset');
 const drawColorInput = document.getElementById('drawColor');
 const drawSizeInput = document.getElementById('drawSize');
@@ -519,6 +521,7 @@ let mapHeight = tileH * letters.length;
 // Tile cache
 let tiles = {};
 let loadedCount = 0;
+let failedCount = 0;
 const defaultScale = 0.15;
 let scale = defaultScale;
 let offsetX = -2000;
@@ -668,6 +671,7 @@ function applyMapConfig(mapConfig, shouldCenter = true) {
   mapHeight = tileH * letters.length;
   tiles = {};
   loadedCount = 0;
+  failedCount = 0;
   loading.style.display = 'block';
   loading.textContent = `Yükleniyor: 0/${letters.length * currentMap.columns}`;
   loadAllTiles();
@@ -710,6 +714,21 @@ function loadAllTiles() {
     for (let c = 1; c <= currentMap.columns; c++) {
       loadTile(letters[r], c);
     }
+  }
+}
+
+function updateLoadingStatus() {
+  const totalTiles = letters.length * currentMap.columns;
+  const finishedTiles = loadedCount + failedCount;
+  const hasFailed = failedCount > 0;
+  loading.textContent = hasFailed
+    ? `Yüklendi: ${loadedCount}/${totalTiles} (Hata: ${failedCount})`
+    : `Yüklendi: ${loadedCount}/${totalTiles}`;
+
+  if (finishedTiles >= totalTiles) {
+    setTimeout(() => {
+      loading.style.display = 'none';
+    }, 600);
   }
 }
 
@@ -837,13 +856,12 @@ function loadTile(row, col) {
   img.src = `${currentMap.tilePath}/${row}${col}.png`;
   img.onload = () => {
     loadedCount++;
-    loading.textContent = `Yüklendi: ${loadedCount}/${letters.length * currentMap.columns}`;
-    if (loadedCount === letters.length * currentMap.columns) {
-      setTimeout(() => loading.style.display = 'none', 1000);
-    }
+    updateLoadingStatus();
     draw();
   };
   img.onerror = () => {
+    failedCount++;
+    updateLoadingStatus();
     console.error(`Tile yüklenemedi: ${row}${col}`);
   };
   
@@ -1175,6 +1193,14 @@ function centerMap() {
   draw();
 }
 
+function fitMapToScreen() {
+  const maxScaleX = canvas.width / mapWidth;
+  const maxScaleY = canvas.height / mapHeight;
+  scale = Math.max(0.05, Math.min(Math.min(maxScaleX, maxScaleY), 1.5));
+  centerMap();
+  updateHud();
+}
+
 function resetView() {
   scale = defaultScale;
   centerMap();
@@ -1214,6 +1240,7 @@ toolDraw.addEventListener('click', () => setMode('draw'));
 toolErase.addEventListener('click', () => setMode('erase'));
 toolMarker.addEventListener('click', () => setMode('marker'));
 toolCenter.addEventListener('click', () => centerMap());
+toolFit.addEventListener('click', () => fitMapToScreen());
 toolReset.addEventListener('click', () => resetView());
 
 toggleToolboxButton.addEventListener('click', () => togglePanel(toolbox, toggleToolboxButton));
